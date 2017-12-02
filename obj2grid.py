@@ -18,7 +18,7 @@ def read_vertex(v_data):
     v = int(split[0])
     return v, vnormal
 
-def read_obj(objfile):
+def read_obj(objfile, flip_yz=False):
     
     vertices = []
     faces = []
@@ -37,7 +37,11 @@ def read_obj(objfile):
             if "" in args:
                 args.remove("")
             x,y,z = map(float, args[1:4])
-            vertices.append((x,y,z))
+            
+            if flip_yz:
+                vertices.append((x,z,y))
+            else:
+                vertices.append((x,y,z))
         elif cmd == "f":
             # if it uses more than 3 vertices to describe a face then we panic!
             # no triangulation yet.
@@ -47,7 +51,10 @@ def read_obj(objfile):
             faces.append((v1,v2,v3))
         elif cmd == "vn":
             nx,ny,nz = map(float, args[1:4])
-            normals.append((nx,ny,nz))
+            if flip_yz:
+                normals.append((nx,nz,ny))
+            else:
+                normals.append((nx,ny,nz))
             
             
     #objects.append((current_object, vertices, faces))
@@ -268,6 +275,8 @@ if __name__ == "__main__":
                         help="Size of cells in grid structure. Bigger can result in smaller file but lower ingame performance")
     parser.add_argument("--grid2obj", action="store_true",
                         help="Use this option to create an OBJ file out of a grid.bin file")
+    parser.add_argument("--flipyz", action="store_true",
+                        help="If option is set, the Y and Z axis are swapped.")
     parser.add_argument("output_grid", default=None, nargs = '?',
                         help="Output path of the created collision file. If --grid2obj is set, output path of the created obj file")
     parser.add_argument("output_mapcode", default=None, nargs = '?',
@@ -324,7 +333,7 @@ if __name__ == "__main__":
             
             print("Parsing obj model", input_model)
             with open(input_model, "r") as f:
-                obj_verts, obj_faces, obj_normals = read_obj(f)
+                obj_verts, obj_faces, obj_normals = read_obj(f, flip_yz=(args.flipyz is True))
             print("Obj model read")
             
             print("Writing to", output_grid)
