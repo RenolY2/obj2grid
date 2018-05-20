@@ -9,6 +9,8 @@ import os
 from struct import pack, unpack
 from math import floor, ceil 
 
+from rarc import Archive
+
 def read_vertex(v_data):
     split = v_data.split("/")
     if len(split) == 3:
@@ -18,6 +20,13 @@ def read_vertex(v_data):
     v = int(split[0])
     return v, vnormal
 
+def coordinates_same(vertices, v1, v2):
+    x_same = vertices[v1][0] == vertices[v2][0]
+    y_same = vertices[v1][1] == vertices[v2][1]
+    z_same = vertices[v1][2] == vertices[v2][2]
+    
+    return x_same and y_same and z_same
+    
 def read_obj(objfile, flip_yz=False):
     
     vertices = []
@@ -25,7 +34,7 @@ def read_obj(objfile, flip_yz=False):
     face_normals = []
     normals = []
     
-    for line in objfile:
+    for i, line in enumerate(objfile):
         line = line.strip()
         args = line.split(" ")
         
@@ -49,6 +58,13 @@ def read_obj(objfile, flip_yz=False):
                 raise RuntimeError("Model needs to be triangulated! Only faces with 3 vertices are supported.")
             v1, v2, v3 = map(read_vertex, args[1:4])
             faces.append((v1,v2,v3))
+            
+            """if (coordinates_same(vertices, v1[0]-1, v2[0]-1) 
+                or coordinates_same(vertices, v2[0]-1, v3[0]-1)
+                or coordinates_same(vertices, v1[0]-1, v3[0]-1)):
+                
+                print("hoi")"""
+            
         elif cmd == "vn":
             nx,ny,nz = map(float, args[1:4])
             if flip_yz:
@@ -270,13 +286,17 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument("input",
-                        help="Filepath of the wavefront .obj file that will be converted into collision. If --grid2obj is set, filepath of the grid.bin to be converted into .obj")
+                        help=(  "Filepath of the wavefront .obj file that will be converted into collision. "
+                                "If --grid2obj is set, filepath of the grid.bin to be converted into .obj. "
+                                "If input is a RARC archive (texts.szs/texts.arc) then the grid.bin will be extracted from it."))
     parser.add_argument("--cell_size", default=100, type=int,
                         help="Size of cells in grid structure. Bigger can result in smaller file but lower ingame performance")
     parser.add_argument("--grid2obj", action="store_true",
                         help="Use this option to create an OBJ file out of a grid.bin file")
     parser.add_argument("--flipyz", action="store_true",
                         help="If option is set, the Y and Z axis are swapped.")
+    parser.add_argument("--target_rarc", default=None, nargs = 1,
+                        help="Target RARC archive (texts.szs, texts.arc) into which grid.bin and mapcode.bin will be written.")
     parser.add_argument("output_grid", default=None, nargs = '?',
                         help="Output path of the created collision file. If --grid2obj is set, output path of the created obj file")
     parser.add_argument("output_mapcode", default=None, nargs = '?',
@@ -288,12 +308,21 @@ if __name__ == "__main__":
     
     base_dir = os.path.dirname(input_model)
     if args.grid2obj is True:
+    
+    
         if args.output_grid is None:
-            output_obj = os.path.join(base_dir, ".obj")
+            output_obj = os.path.join(base_dir, "grid.obj")
         else:
             output_obj = args.output_grid
         
         with open(input_model, "rb") as f:
+            header = f.read(4)
+            f.seek(0)
+            
+            if header == b"RARC" or header == b"Yaz0":
+                archive = Archive.from_file(f)
+                f = archive["text/grid.bin"]
+                
             collision = PikminCollision(f)
         print("Loaded", input_model)    
         with open(output_obj, "w") as f:
@@ -335,9 +364,15 @@ if __name__ == "__main__":
             with open(input_model, "r") as f:
                 obj_verts, obj_faces, obj_normals = read_obj(f, flip_yz=(args.flipyz is True))
             print("Obj model read")
+            if args.target_rarc is None:
+                print("Writing to", output_grid)
+                out = open(output_grid, "wb")
+            else:
+                with open(args.target_rarc[0], "rb") as f:
+                    archive = Archive.from_file(f)
+                out = archive["text/grid.bin"]
             
-            print("Writing to", output_grid)
-            with open(output_grid, "wb") as f:
+            with out as f:
                 
                 write_int(f, len(obj_verts))
                 
@@ -383,7 +418,9 @@ if __name__ == "__main__":
                     cross_norm = cross_product(v1tov2, v1tov3)
                     if cross_norm[0] == cross_norm[1] == cross_norm[2] == 0.0:
                         skipped_faces[i] = True
-                        continue # Skipping faces which are a single line
+                        print("Found face which was a single line: Face", i, face, "(vertex index,vertex normal index)")
+                        raise RuntimeError("Can't continue like this so we will quit now. \n"
+                                            "Find and delete the troublesome face from the obj file and try again")
                         
                     norm = normalize_vector(cross_norm)
                     
@@ -512,13 +549,30 @@ if __name__ == "__main__":
                             
                             for i, face in group:
                                 write_int(f, i)
-
-            print("Writing mapcode to", output_mapcode)
-            with open(output_mapcode, "wb") as f:
-                write_int(f, len(obj_faces))
+                f.seek(0)
+            
+            if args.target_rarc is None:
+                print("Writing mapcode to", output_mapcode)
                 
-                for i in range(len(obj_faces)):
-                    f.write(b"\x00")
+                with open(output_mapcode, "wb") as f:
+                    write_int(f, len(obj_faces))
+                    
+                    for i in range(len(obj_faces)):
+                        f.write(b"\x00")
+                    
+            else:
+                print("Writing mapcode to archive")
+                
+                with archive["text/mapcode.bin"] as f:
+                    write_int(f, len(obj_faces))
+                    
+                    for i in range(len(obj_faces)):
+                        f.write(b"\x00")
+                    f.seek(0)
+                    
+                with open(args.target_rarc[0], "wb") as f:
+                    archive.write_arc_compressed(f)
+                
 
             print("finished!")
             time.sleep(1)
