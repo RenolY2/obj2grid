@@ -449,25 +449,28 @@ if __name__ == "__main__":
                     cross_norm = cross_product(v1tov2, v1tov3)
                     if cross_norm[0] == cross_norm[1] == cross_norm[2] == 0.0:
                         skipped_faces[i] = True
-                        print("Found face which was a single line: Face", i, face, "(vertex index,vertex normal index)")
-                        raise RuntimeError("Can't continue like this so we will quit now. \n"
-                                            "Find and delete the troublesome face from the obj file and try again")
+                        #print("Found face which was a single line: Face", i, face, "(vertex index,vertex normal index)")
+                        #raise RuntimeError("Can't continue like this so we will quit now. \n"
+                        #                    "Find and delete the troublesome face from the obj file and try again")
+                        tan1 = tan2 = tan3 = norm = [0.0, 0.0, 0.0]
+                        a = b = c = d = 0
+                    else:
+                        norm = normalize_vector(cross_norm)
                         
-                    norm = normalize_vector(cross_norm)
-                    
-                    tan1 = normalize_vector(cross_product(v1tov2, norm))
-                    tan2 = normalize_vector(cross_product(v2tov3, norm))
-                    tan3 = normalize_vector(cross_product(v3tov1, norm))
-                    
-                    norm_x, norm_y, norm_z = norm
-                    
-                    midx = (v1[0]+v2[0]+v3[0])/3.0
-                    midy = (v1[1]+v2[1]+v3[1])/3.0
-                    midz = (v1[2]+v2[2]+v3[2])/3.0
-                    a = norm_x*midx + norm_y*midy + norm_z*midz
-                    b = tan1[0]*v1[0] + tan1[1]*v1[1] + tan1[2]*v1[2]
-                    c = tan2[0]*v2[0] + tan2[1]*v2[1] + tan2[2]*v2[2]
-                    d = tan3[0]*v3[0] + tan3[1]*v3[1] + tan3[2]*v3[2]
+                        tan1 = normalize_vector(cross_product(v1tov2, norm))
+                        tan2 = normalize_vector(cross_product(v2tov3, norm))
+                        tan3 = normalize_vector(cross_product(v3tov1, norm))
+                        
+                        norm_x, norm_y, norm_z = norm
+                        
+                        midx = (v1[0]+v2[0]+v3[0])/3.0
+                        midy = (v1[1]+v2[1]+v3[1])/3.0
+                        midz = (v1[2]+v2[2]+v3[2])/3.0
+                        a = norm_x*midx + norm_y*midy + norm_z*midz
+                        b = tan1[0]*v1[0] + tan1[1]*v1[1] + tan1[2]*v1[2]
+                        c = tan2[0]*v2[0] + tan2[1]*v2[1] + tan2[2]*v2[2]
+                        d = tan3[0]*v3[0] + tan3[1]*v3[1] + tan3[2]*v3[2]
+                        
                     
                     write_int(f, v1_index-1)
                     write_int(f, v3_index-1)
