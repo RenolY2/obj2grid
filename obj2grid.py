@@ -6,7 +6,7 @@
 import time
 import argparse
 import os
-from struct import pack, unpack
+from struct import pack, unpack, unpack_from
 from math import floor, ceil 
 
 from rarc import Archive
@@ -323,18 +323,49 @@ if __name__ == "__main__":
                 archive = Archive.from_file(f)
                 f = archive["text/grid.bin"]
                 
+                mapcode = archive["text/mapcode.bin"]
+                floortypes = mapcode.read()
+            else:
+                try:
+                    with open(os.path.join(base_dir, "mapcode.bin"), "rb") as g:
+                        floortypes = g.read()
+                except:
+                    floortypes = None
+                
             collision = PikminCollision(f)
-        print("Loaded", input_model)    
+            
+            if floortypes is not None:
+                facecount = unpack_from(">I", floortypes, 0)[0] 
+                if len(collision.faces) != facecount:
+                    print(  "Face count in mapcode.bin doesn't match up with "
+                            "face count in obj: {0} vs {1}".format(facecount, len(collision.faces)))
+                    print("Disregarding mapcode.bin.")
+                    floortypes = None 
+            
+        print("Loaded", input_model)  
+        
         with open(output_obj, "w") as f:
             f.write("# .OBJ generated from Pikmin 2 by Yoshi2's obj2grid.py\n\n")
             f.write("# VERTICES BELOW\n\n") 
             for vx, vy, vz in collision.vertices:
                 f.write("v {} {} {}\n".format(vx, vy, vz))
+                
             f.write("\n# FACES BELOW\n\n")
+            last_groundtype = None
+            i = 0
+            
             for vertices, normals, rest in collision.faces:
+                if floortypes is not None:
+                    if last_groundtype != floortypes[4 + i]:
+                        last_groundtype = floortypes[4 + i]
+                        f.write("usemtl Groundtype_{{{:x}}}\n".format(last_groundtype))
+                
                 v1,v2,v3 = vertices 
                 f.write("f {} {} {}\n".format(v1+1, v2+1, v3+1))
+                i += 1
+                
         print("obj file written to", output_obj)
+        
     else:
         if args.output_grid is None:
             output_grid = os.path.join(base_dir, "grid.bin")
