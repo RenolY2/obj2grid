@@ -358,10 +358,10 @@ if __name__ == "__main__":
                 if floortypes is not None:
                     if last_groundtype != floortypes[4 + i]:
                         last_groundtype = floortypes[4 + i]
-                        f.write("usemtl Groundtype_{{{:x}}}\n".format(last_groundtype))
+                        f.write("usemtl Ground_0x{:x}\n".format(last_groundtype))
                 
                 v1,v2,v3 = vertices 
-                f.write("f {} {} {}\n".format(v1+1, v2+1, v3+1))
+                f.write("f {} {} {}\n".format(v1+1, v3+1, v2+1))
                 i += 1
                 
         print("obj file written to", output_obj)
