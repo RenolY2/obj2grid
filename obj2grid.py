@@ -470,8 +470,8 @@ if __name__ == "__main__":
                     d = tan3[0]*v3[0] + tan3[1]*v3[1] + tan3[2]*v3[2]
                     
                     write_int(f, v1_index-1)
-                    write_int(f, v2_index-1)
                     write_int(f, v3_index-1)
+                    write_int(f, v2_index-1)
                     
                     for val in norm:
                         write_float(f, val)
