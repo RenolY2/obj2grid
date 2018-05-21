@@ -296,7 +296,10 @@ if __name__ == "__main__":
     parser.add_argument("--flipyz", action="store_true",
                         help="If option is set, the Y and Z axis are swapped.")
     parser.add_argument("--target_rarc", default=None, nargs = 1,
-                        help="Target RARC archive (texts.szs, texts.arc) into which grid.bin and mapcode.bin will be written.")
+                        help=(
+                            "Target RARC archive (texts.szs, texts.arc) into which grid.bin and mapcode.bin will be written. "
+                            "The archive needs to exist already."
+                            ))
     parser.add_argument("output_grid", default=None, nargs = '?',
                         help="Output path of the created collision file. If --grid2obj is set, output path of the created obj file")
     parser.add_argument("output_mapcode", default=None, nargs = '?',
