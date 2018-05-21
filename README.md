@@ -16,18 +16,19 @@ a grid.bin and a mapcode.bin out of your .obj file in the folder of the .obj fil
 a grid.bin file onto make_obj.bat to turn Pikmin 2 collision back into .obj.
 
 Information for command line usage:
-python obj2grid.py [-h] [--cell_size CELL_SIZE] [--grid2obj] 
-                    input [output_grid] [output_mapcode]
-                        
-                        
+```
+python obj2grid.py [-h] [--cell_size CELL_SIZE] [--grid2obj] [--flipyz]
+                   [--target_rarc TARGET_RARC]
+                   input [output_grid] [output_mapcode]
+
 positional arguments:
   input                 Filepath of the wavefront .obj file that will be
                         converted into collision. If --grid2obj is set,
-                        filepath of the grid.bin to be converted into .obj
-                        
+                        filepath of the grid.bin to be converted into .obj. If
+                        input is a RARC archive (texts.szs/texts.arc) then the
+                        grid.bin will be extracted from it.
   output_grid           Output path of the created collision file. If
                         --grid2obj is set, output path of the created obj file
-                        
   output_mapcode        Output path of the created mapcode file
 
 optional arguments:
@@ -35,14 +36,23 @@ optional arguments:
   --cell_size CELL_SIZE
                         Size of cells in grid structure. Bigger can result in
                         smaller file but lower ingame performance
-                        
   --grid2obj            Use this option to create an OBJ file out of a
                         grid.bin file
+  --flipyz              If option is set, the Y and Z axis are swapped.
+  --target_rarc TARGET_RARC
+                        Target RARC archive (texts.szs, texts.arc) into which
+                        grid.bin and mapcode.bin will be written. The archive
+                        needs to exist already.
+```
 
 Examples:
-python obj2grid.py --cell_size 100 MyCustomCollision.obj MyPikminGrid.bin MyPikminMapcode.bin 
 
-python obj2grid.py --grid2obj MyPikminGrid.bin MyCollision.obj
+``python obj2grid.py --cell_size 100 MyCustomCollision.obj MyPikminGrid.bin MyPikminMapcode.bin``
 
-Note: you can also put in absolute file paths (i.e. ones starting with C:\) so that your finished collision
-is put directly into the folder you want them in.
+``python obj2grid.py MyCustomCollision.obj --target_rarc "C:\Modding\Pikmin 2\user\Kando\map\tutorial\texts.szs"``
+
+``python obj2grid.py --grid2obj MyPikminGrid.bin MyCollision.obj``
+
+
+Note: you can use absolute file paths (i.e. ones starting with C:\ or C:/) so that your finished collision
+is put directly into the folder you want them in, see second example above.
