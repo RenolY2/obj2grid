@@ -8,6 +8,7 @@ import argparse
 import os
 from struct import pack, unpack, unpack_from
 from math import floor, ceil 
+from re import match
 
 from rarc import Archive
 
@@ -34,6 +35,8 @@ def read_obj(objfile, flip_yz=False):
     face_normals = []
     normals = []
     
+    floor_type = 0x00
+    
     for i, line in enumerate(objfile):
         line = line.strip()
         args = line.split(" ")
@@ -57,7 +60,7 @@ def read_obj(objfile, flip_yz=False):
             if len(args) != 4:
                 raise RuntimeError("Model needs to be triangulated! Only faces with 3 vertices are supported.")
             v1, v2, v3 = map(read_vertex, args[1:4])
-            faces.append((v1,v2,v3))
+            faces.append((v1,v2,v3, floor_type))
             
             """if (coordinates_same(vertices, v1[0]-1, v2[0]-1) 
                 or coordinates_same(vertices, v2[0]-1, v3[0]-1)
@@ -71,6 +74,18 @@ def read_obj(objfile, flip_yz=False):
                 normals.append((nx,nz,ny))
             else:
                 normals.append((nx,ny,nz))
+                
+        elif cmd == "usemtl":
+            assert len(args) >= 2
+
+            matname = " ".join(args[1:])
+
+            floor_type_match = match("^(.*?)(0x[0-9a-fA-F]{2})(.*?)$", matname)
+
+            if floor_type_match is not None:
+                floor_type = int(floor_type_match.group(2), 16)
+            else:
+                floor_type = 0x00
             
             
     #objects.append((current_object, vertices, faces))
@@ -566,7 +581,7 @@ if __name__ == "__main__":
                 print(start_x + grid_size_x*box_size_x, start_z + grid_size_z*box_size_z)
                 
                 
-                triangles = [(i, face) for i, face in enumerate(faces)]
+                triangles = [(i, face[:3]) for i, face in enumerate(faces)]
                 
                 grid = {}
                 print("starting off with", len(triangles), "triangles")
@@ -594,8 +609,10 @@ if __name__ == "__main__":
                 with open(output_mapcode, "wb") as f:
                     write_int(f, len(obj_faces))
                     
-                    for i in range(len(obj_faces)):
-                        f.write(b"\x00")
+                    #for i in range(len(obj_faces)):
+                    #    f.write(b"\x00")
+                    for _,_,_, floortype in obj_faces:
+                        f.write(bytes([floortype]))
                     
             else:
                 print("Writing mapcode to archive")
@@ -603,8 +620,11 @@ if __name__ == "__main__":
                 with archive["text/mapcode.bin"] as f:
                     write_int(f, len(obj_faces))
                     
-                    for i in range(len(obj_faces)):
-                        f.write(b"\x00")
+                    #for i in range(len(obj_faces)):
+                    #    f.write(b"\x00")
+                    for _,_,_, floortype in obj_faces:
+                        f.write(bytes([floortype]))
+                        
                     f.seek(0)
                     
                 with open(args.target_rarc[0], "wb") as f:
